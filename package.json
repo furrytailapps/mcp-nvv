@@ -1,0 +1,47 @@
+{
+  "name": "nvv-mcp",
+  "version": "1.0.0",
+  "description": "MCP server wrapping the Naturvardsverket (Swedish EPA) API for protected nature areas",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/furrytailapps/nvv-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "naturvardsverket",
+    "swedish-epa",
+    "protected-areas",
+    "sweden",
+    "environmental-data"
+  ],
+  "author": "Yesper",
+  "bugs": {
+    "url": "https://github.com/furrytailapps/nvv-mcp/issues"
+  },
+  "homepage": "https://github.com/furrytailapps/nvv-mcp",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "mcp-handler": "^1.0.5",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.2.0",
+    "typescript": "^5.0.0"
+  }
+}
