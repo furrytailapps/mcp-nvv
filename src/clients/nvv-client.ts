@@ -1,4 +1,5 @@
 import { createHttpClient } from '@/lib/http-client';
+import { extractBoundingBoxFromWkt, combineBoundingBoxes, boundingBoxToWkt } from '@/lib/wkt-utils';
 import {
   DEFAULT_DECISION_STATUS,
   type NvvArea,
@@ -128,10 +129,57 @@ export const nvvClient = {
   /**
    * Get bounding box for multiple areas
    * Endpoint: GET /omrade/extentAsWkt
+   *
+   * WORKAROUND: The NVV API has a bug where calling this endpoint with multiple IDs
+   * fails with Oracle error ORA-28579 (returns HTTP 500). We try the original API first,
+   * and if it fails, we fall back to computing the extent client-side.
    */
   async getAreasExtent(areaIds: string[]): Promise<string> {
-    return client.request<string>('/omrade/extentAsWkt', {
-      params: { id: areaIds.join(',') },
-    });
+    // WORKAROUND: Try original API first (auto-heals when NVV fixes their bug)
+    try {
+      const result = await client.request<string>('/omrade/extentAsWkt', {
+        params: { id: areaIds.join(',') },
+      });
+
+      // Check if response is valid WKT (starts with POLYGON)
+      if (result.startsWith('POLYGON')) {
+        return result;
+      }
+
+      // Response was not valid WKT, fall back to workaround
+      throw new Error('Invalid WKT response');
+    } catch {
+      // WORKAROUND: NVV API bug detected (HTTP 500 or invalid response)
+      // Fall back to computing extent client-side
+      return this.computeExtentClientSide(areaIds);
+    }
+  },
+
+  /**
+   * WORKAROUND: Client-side extent calculation
+   *
+   * This method exists because the NVV API's /omrade/extentAsWkt endpoint
+   * fails with Oracle error ORA-28579 when called with multiple area IDs.
+   *
+   * We fetch individual WKT geometries for each area, extract their bounding boxes,
+   * and compute a combined bounding box.
+   *
+   * TODO: Remove when NVV fixes their API. Test by calling:
+   *   curl "https://geodata.naturvardsverket.se/naturvardsregistret/rest/v3/omrade/extentAsWkt?id=2000019,2000140"
+   * If it returns valid WKT instead of Oracle error, the bug is fixed.
+   */
+  async computeExtentClientSide(areaIds: string[]): Promise<string> {
+    // Fetch WKT geometry for each area in parallel
+    const wktPromises = areaIds.map((id) => this.getAreaWkt(id));
+    const wktResults = await Promise.all(wktPromises);
+
+    // Extract bounding box from each geometry
+    const boundingBoxes = wktResults.map(extractBoundingBoxFromWkt);
+
+    // Combine all bounding boxes into one
+    const combinedBox = combineBoundingBoxes(boundingBoxes);
+
+    // Convert back to WKT format
+    return boundingBoxToWkt(combinedBox);
   },
 };
