@@ -1,4 +1,5 @@
 import { createHttpClient } from '@/lib/http-client';
+import { runWithConcurrency, NVV_API_CONCURRENCY } from '@/lib/concurrency';
 import { extractBoundingBoxFromWkt, combineBoundingBoxes, boundingBoxToWkt } from '@/lib/wkt-utils';
 import {
   DEFAULT_DECISION_STATUS,
@@ -188,9 +189,11 @@ export const nvvClient = {
    * If it returns valid WKT instead of Oracle error, the bug is fixed.
    */
   async computeExtentClientSide(areaIds: string[]): Promise<string> {
-    // Fetch WKT geometry for each area in parallel
-    const wktPromises = areaIds.map((id) => this.getAreaWkt(id));
-    const wktResults = await Promise.all(wktPromises);
+    // Fetch WKT geometry for each area with limited concurrency to avoid 503s
+    const wktResults = await runWithConcurrency(
+      areaIds.map((id) => () => this.getAreaWkt(id)),
+      NVV_API_CONCURRENCY,
+    );
 
     // Extract bounding box from each geometry
     const boundingBoxes = wktResults.map(extractBoundingBoxFromWkt);

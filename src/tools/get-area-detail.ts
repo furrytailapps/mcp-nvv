@@ -52,16 +52,24 @@ export const getAreaDetailHandler = withErrorHandling(async (args: GetAreaDetail
     coordinate_system: 'EPSG:3006 (SWEREF99 TM)',
   };
 
-  // Fetch all data types in parallel for better performance
+  // Fetch all data types with limited concurrency (2 at a time) to avoid overwhelming upstream API
   if (include === 'all') {
-    const [geometry, purposes, land_cover, regulations, env_goals, documents] = await Promise.all([
+    // Batch 1: geometry + purposes
+    const [geometry, purposes] = await Promise.all([
       nvvClient.getAreaWkt(areaId, status),
       nvvClient.getAreaPurposes(areaId, status),
+    ]);
+    // Batch 2: land_cover + regulations
+    const [land_cover, regulations] = await Promise.all([
       nvvClient.getAreaLandCover(areaId, status),
       nvvClient.getAreaRegulations(areaId, status),
+    ]);
+    // Batch 3: env_goals + documents
+    const [env_goals, documents] = await Promise.all([
       nvvClient.getAreaEnvironmentalGoals(areaId, status),
       nvvClient.getAreaDocuments(areaId, status),
     ]);
+
     result.geometry = geometry;
     result.purposes = purposes;
     result.land_cover = land_cover;
