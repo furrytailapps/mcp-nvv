@@ -3,7 +3,7 @@ import { nvvClient } from '@/clients/nvv-client';
 import { withErrorHandling } from '@/lib/response';
 
 export const getAreasExtentInputSchema = {
-  areaIds: z.array(z.string()).min(1).max(100).describe('Array of NVR area identifiers to calculate extent for (1-100 IDs)'),
+  areaIds: z.array(z.string()).min(1).max(100).describe('Array of area IDs (1-100). Example: ["2000019", "2000140"]'),
 };
 
 export const getAreasExtentTool = {

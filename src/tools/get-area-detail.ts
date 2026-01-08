@@ -11,7 +11,7 @@ const INCLUDE_TYPES = ['geometry', 'purposes', 'land_cover', 'regulations', 'env
 type IncludeType = (typeof INCLUDE_TYPES)[number];
 
 export const getAreaDetailInputSchema = {
-  areaId: z.string().describe('Area ID from nvv_list_protected_areas'),
+  areaId: z.string().describe("Area ID from nvv_list_protected_areas (e.g., '2000019')"),
   status: z.string().optional().describe("Decision status: 'Gällande' (default), 'Överklagat', 'Beslutat'"),
   include: z
     .enum(INCLUDE_TYPES)
