@@ -11,7 +11,7 @@ MCP server wrapping Naturvårdsverket (Swedish Environmental Protection Agency) 
 ## Production URL
 
 ```
-https://mcp-nvv.vercel.app/mcp
+https://nvv-mcp.vercel.app/mcp
 ```
 
 ## Available Tools (<!-- AUTO:tool_count -->7<!-- /AUTO -->)
