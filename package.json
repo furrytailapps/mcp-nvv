@@ -1,5 +1,5 @@
 {
-  "name": "nvv-mcp",
+  "name": "mcp-nvv",
   "version": "1.0.0",
   "description": "MCP server wrapping the Naturvardsverket (Swedish EPA) API for protected nature areas",
   "type": "module",
