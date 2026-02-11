@@ -2,35 +2,23 @@ export default function Home() {
   return (
     <main style={{ padding: '2rem', fontFamily: 'system-ui, sans-serif' }}>
       <h1>NVV MCP Server</h1>
-      <p>MCP server wrapping the Naturvårdsverket (Swedish EPA) API for protected nature areas.</p>
+      <p>
+        MCP server wrapping Naturvårdsverket (Swedish EPA) APIs for protected nature areas across three sources: national,
+        Natura 2000, and Ramsar.
+      </p>
       <h2>Available Tools</h2>
       <ul>
         <li>
-          <strong>nvv_list_protected_areas</strong> - List protected areas by location
+          <strong>nvv_lookup</strong> - Look up Swedish municipality and county codes
         </li>
         <li>
-          <strong>nvv_get_area_geometry</strong> - Get WKT geometry for an area
+          <strong>nvv_search</strong> - Search all protected areas across all sources
         </li>
         <li>
-          <strong>nvv_get_area_purposes</strong> - Get protection purposes
+          <strong>nvv_detail</strong> - Get detailed info for a specific area
         </li>
         <li>
-          <strong>nvv_get_area_land_cover</strong> - Get land cover classification
-        </li>
-        <li>
-          <strong>nvv_get_area_environmental_goals</strong> - Get environmental goals
-        </li>
-        <li>
-          <strong>nvv_get_area_regulations</strong> - Get regulation zones
-        </li>
-        <li>
-          <strong>nvv_get_areas_extent</strong> - Get bounding box for areas
-        </li>
-        <li>
-          <strong>nvv_lookup_municipality</strong> - Search municipality codes
-        </li>
-        <li>
-          <strong>nvv_lookup_county</strong> - Search county codes
+          <strong>nvv_extent</strong> - Calculate bounding box for multiple areas
         </li>
       </ul>
       <h2>Usage</h2>

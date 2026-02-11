@@ -56,6 +56,15 @@ function transformArea(area: NvvArea): ProtectedArea {
 
 export const nvvClient = {
   /**
+   * Get a single area by ID
+   * Endpoint: GET /omrade/{areaId}/{status}
+   */
+  async getArea(areaId: string, status = DEFAULT_DECISION_STATUS): Promise<ProtectedArea> {
+    const area = await client.request<NvvArea>(`/omrade/${areaId}/${encodeURIComponent(status)}`);
+    return transformArea(area);
+  },
+
+  /**
    * List protected areas by location
    * Accepts kommun (municipality code), lan (county code), or namn (area name)
    * Endpoint: GET /omrade/nolinks

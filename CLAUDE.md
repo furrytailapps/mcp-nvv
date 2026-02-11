@@ -14,29 +14,21 @@ MCP server wrapping Naturvårdsverket (Swedish Environmental Protection Agency) 
 https://mcp-nvv.vercel.app/mcp
 ```
 
-## Available Tools (<!-- AUTO:tool_count -->7<!-- /AUTO -->)
+## Available Tools (<!-- AUTO:tool_count -->4<!-- /AUTO -->)
 
-### Naturvardsregistret (National)
+| Tool         | Description                                                                  |
+| ------------ | ---------------------------------------------------------------------------- |
+| `nvv_lookup` | Municipality and county code lookup. Use codes with nvv_search.              |
+| `nvv_search` | Unified search across all 3 sources (national, N2000, Ramsar) in parallel.   |
+| `nvv_detail` | Get detail for any area by id + source. Routes to correct API automatically. |
+| `nvv_extent` | Combined bounding box for areas across all sources.                          |
 
-| Tool                       | Description                                                         |
-| -------------------------- | ------------------------------------------------------------------- |
-| `nvv_list_protected_areas` | Search by municipality/county/name                                  |
-| `nvv_get_area_detail`      | Fetch geometry, purposes, land cover, regulations, goals, documents |
-| `nvv_lookup`               | Municipality and county code lookup                                 |
-| `nvv_get_areas_extent`     | Calculate bounding box for multiple areas                           |
+### Tool workflow
 
-### Natura 2000 (EU)
-
-| Tool              | Description                                              |
-| ----------------- | -------------------------------------------------------- |
-| `nvv_n2000_search` | Search N2000 areas by location, species, or habitat type |
-| `nvv_n2000_detail` | Get species and EU habitat types for an N2000 area       |
-
-### Ramsar (International Wetlands)
-
-| Tool               | Description                           |
-| ------------------ | ------------------------------------- |
-| `nvv_ramsar_search` | Search Ramsar wetland sites (~68 total) |
+1. `nvv_lookup` — convert place name to kommun/lan code
+2. `nvv_search` — pass kommun or lan code, gets ALL protected areas from ALL sources
+3. `nvv_detail` — pass `id` + `source` from search results for full details
+4. `nvv_extent` — pass IDs grouped by source for combined bounding box
 
 ## Project Structure
 
@@ -58,14 +50,11 @@ src/
 │   ├── search-helpers.ts      # Search utilities
 │   └── wkt-utils.ts           # WKT geometry parsing
 ├── tools/
-│   ├── index.ts               # Tool registry (7 tools)
-│   ├── list-protected-areas.ts
-│   ├── get-area-detail.ts
-│   ├── lookup.ts
-│   ├── get-areas-extent.ts
-│   ├── n2000-search.ts        # Natura 2000 search
-│   ├── n2000-detail.ts        # Natura 2000 details (species/habitats)
-│   └── ramsar-search.ts       # Ramsar wetland search
+│   ├── index.ts               # Tool registry (4 tools)
+│   ├── lookup.ts              # nvv_lookup
+│   ├── search.ts              # nvv_search — fan-out to all 3 sources
+│   ├── detail.ts              # nvv_detail — dispatcher by source
+│   └── extent.ts              # nvv_extent — combined bounding box
 └── types/
     ├── nvv-api.ts             # Naturvardsregistret types
     ├── n2000-api.ts           # Natura 2000 types
@@ -79,6 +68,7 @@ src/
 **Base URL:** `https://geodata.naturvardsverket.se/naturvardsregistret/rest/v3`
 
 ```typescript
+nvvClient.getArea(areaId, status);
 nvvClient.listAreas({ kommun, lan, namn, limit });
 nvvClient.getAreaWkt(areaId, status);
 nvvClient.getAreaPurposes(areaId, status);
@@ -101,9 +91,9 @@ n2000Client.getAreaHabitats(kod);
 n2000Client.getAreaLandCover(kod);
 n2000Client.getAreaWkt(kod);
 n2000Client.getAreaDocuments(kod);
-n2000Client.getAllSpecies();
-n2000Client.getSpeciesByGroup(group);
-n2000Client.getAllHabitats();
+n2000Client.getAllSpecies(); // intentionally orphaned (reference data)
+n2000Client.getSpeciesByGroup(group); // intentionally orphaned (reference data)
+n2000Client.getAllHabitats(); // intentionally orphaned (reference data)
 ```
 
 ### Ramsar API
@@ -115,14 +105,12 @@ ramsarClient.listAreas({ kommun, lan, namn, limit });
 ramsarClient.getArea(id);
 ramsarClient.getAreaWkt(id);
 ramsarClient.getAreaLandCover(id);
-ramsarClient.getProtectionTypes();
+ramsarClient.getProtectionTypes(); // intentionally orphaned (reference data)
 ```
 
 ### Status Values (Naturvardsregistret only)
 
-- `Gallande` (default) - Active/In effect
-- `Overklagat` - Appealed
-- `Beslutat` - Decided
+Tools always use `Gällande` (active/current). No status parameter exposed.
 
 ## Concurrency
 
@@ -130,7 +118,7 @@ NVV API is rate-limited. Use `runWithConcurrency()` from `@/lib/concurrency.ts` 
 
 ## Workarounds
 
-**Extent endpoint bug:** NVV API's extent endpoint fails with Oracle errors on multiple IDs. Workaround in `get-areas-extent.ts` fetches individual geometries and computes bounding box client-side.
+**Extent endpoint bug:** NVV API's extent endpoint fails with Oracle errors on multiple IDs. Workaround in client `computeExtentClientSide()` fetches individual geometries and computes bounding box client-side.
 
 ## Development
 
@@ -143,8 +131,8 @@ npm run prettier:fix # Format code
 
 ## Testing
 
-Test files in `tests/` directory:
+Use the shared MCP test runner (no project-local test files):
 
-- `basic.cjs` - Basic connectivity
-- `comprehensive.cjs` - All tools
-- `edge-cases.cjs` - Error handling
+```bash
+node ~/.claude/scripts/mcp-test-runner.cjs https://mcp-nvv.vercel.app/mcp --all -v
+```

@@ -26,7 +26,7 @@ export const lookupTool = {
     'Look up Swedish administrative codes. ' +
     "municipality: Returns 4-digit kommun codes (e.g., Stockholm -> '0180'). " +
     "county: Returns letter län codes (e.g., Stockholms län -> 'AB', Skåne -> 'M'). " +
-    'Use codes with nvv_list_protected_areas.',
+    'Use codes with nvv_search.',
   inputSchema: lookupInputSchema,
 };
 
