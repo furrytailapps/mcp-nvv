@@ -105,7 +105,10 @@ async function searchByBbox(args: SearchInput, limit: number) {
       areas.push({ source: 'national', ...area });
     }
   } else {
-    errors.push({ source: 'national', message: national.reason?.message ?? 'Unknown error' });
+    errors.push({
+      source: 'national',
+      message: national.reason?.message ?? 'An unexpected error occurred while searching national protected areas.',
+    });
   }
 
   if (n2000.status === 'fulfilled') {
@@ -113,7 +116,10 @@ async function searchByBbox(args: SearchInput, limit: number) {
       areas.push({ source: 'n2000', ...area });
     }
   } else {
-    errors.push({ source: 'n2000', message: n2000.reason?.message ?? 'Unknown error' });
+    errors.push({
+      source: 'n2000',
+      message: n2000.reason?.message ?? 'An unexpected error occurred while searching Natura 2000 areas.',
+    });
   }
 
   const nationalCount = national.status === 'fulfilled' ? national.value.length : 0;
@@ -150,7 +156,10 @@ async function searchByKommunLan(args: SearchInput, limit: number) {
       areas.push({ source: 'national', ...area });
     }
   } else {
-    errors.push({ source: 'national', message: national.reason?.message ?? 'Unknown error' });
+    errors.push({
+      source: 'national',
+      message: national.reason?.message ?? 'An unexpected error occurred while searching national protected areas.',
+    });
   }
 
   if (n2000.status === 'fulfilled') {
@@ -159,7 +168,10 @@ async function searchByKommunLan(args: SearchInput, limit: number) {
       areas.push({ source: 'n2000', id: kod, ...rest });
     }
   } else {
-    errors.push({ source: 'n2000', message: n2000.reason?.message ?? 'Unknown error' });
+    errors.push({
+      source: 'n2000',
+      message: n2000.reason?.message ?? 'An unexpected error occurred while searching Natura 2000 areas.',
+    });
   }
 
   if (ramsar.status === 'fulfilled') {
@@ -167,7 +179,10 @@ async function searchByKommunLan(args: SearchInput, limit: number) {
       areas.push({ source: 'ramsar', ...area });
     }
   } else {
-    errors.push({ source: 'ramsar', message: ramsar.reason?.message ?? 'Unknown error' });
+    errors.push({
+      source: 'ramsar',
+      message: ramsar.reason?.message ?? 'An unexpected error occurred while searching Ramsar wetland areas.',
+    });
   }
 
   const nationalCount = national.status === 'fulfilled' ? national.value.length : 0;

@@ -50,14 +50,18 @@ export const wfsClient = {
     } catch (error) {
       if (error instanceof UpstreamApiError) throw error;
       throw new UpstreamApiError(
-        `WFS national request failed: ${error instanceof Error ? error.message : 'Unknown'}`,
+        'Failed to search national protected areas by location. The data service may be temporarily unavailable — try again or use kommun/lan codes instead.',
         0,
         'naturvardsregistret/wfs',
       );
     }
 
     if (!data.features || !Array.isArray(data.features)) {
-      throw new UpstreamApiError('WFS national returned invalid response (no features array)', 0, 'naturvardsregistret/wfs');
+      throw new UpstreamApiError(
+        'National protected areas search returned an unexpected response. Try again or use kommun/lan codes instead.',
+        0,
+        'naturvardsregistret/wfs',
+      );
     }
 
     return data.features.map((f) => ({
@@ -89,14 +93,18 @@ export const wfsClient = {
     } catch (error) {
       if (error instanceof UpstreamApiError) throw error;
       throw new UpstreamApiError(
-        `WFS N2000 request failed: ${error instanceof Error ? error.message : 'Unknown'}`,
+        'Failed to search Natura 2000 areas by location. The data service may be temporarily unavailable — try again or use kommun/lan codes instead.',
         0,
         'n2000/wfs',
       );
     }
 
     if (!data.features || !Array.isArray(data.features)) {
-      throw new UpstreamApiError('WFS N2000 returned invalid response (no features array)', 0, 'n2000/wfs');
+      throw new UpstreamApiError(
+        'Natura 2000 search returned an unexpected response. Try again or use kommun/lan codes instead.',
+        0,
+        'n2000/wfs',
+      );
     }
 
     return data.features.map((f) => ({
