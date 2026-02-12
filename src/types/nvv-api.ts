@@ -135,3 +135,38 @@ export interface County {
 // Default decision status for area queries
 // "Gällande" means "Current/Valid" in Swedish
 export const DEFAULT_DECISION_STATUS = 'Gällande';
+
+/**
+ * WFS GeoJSON response types
+ */
+
+export interface WfsFeatureCollection<P> {
+  type: 'FeatureCollection';
+  features: WfsFeature<P>[];
+  numberReturned?: number;
+  totalFeatures?: number;
+}
+
+export interface WfsFeature<P> {
+  type: 'Feature';
+  properties: P;
+  geometry: unknown;
+}
+
+export interface WfsNationalProperties {
+  NVRID: string;
+  NAMN: string;
+  SKYDDSTYP: string;
+  AREA_HA: number;
+  KOMMUN: string;
+  LAN: string;
+}
+
+export interface WfsN2000Properties {
+  OMRADESKOD: string;
+  OMRADESNAMN: string;
+  OMRADESTYP: string;
+  AREA_HA: number;
+  KOMMUN: string;
+  LAN: string;
+}

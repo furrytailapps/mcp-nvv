@@ -53,10 +53,17 @@ export function createHttpClient(config: HttpClientConfig) {
         throw new UpstreamApiError(`API request failed: ${response.status} ${response.statusText}`, response.status, baseUrl);
       }
 
-      // Handle text responses (like WKT)
       const contentType = response.headers.get('content-type');
+
+      // Handle text responses (like WKT)
       if (contentType?.includes('text/plain')) {
         return (await response.text()) as T;
+      }
+
+      // Handle XML error responses (e.g., WFS ServiceExceptionReport returned on HTTP 200)
+      if (contentType?.includes('text/xml') || contentType?.includes('application/xml')) {
+        const text = await response.text();
+        throw new UpstreamApiError(`API returned XML error response: ${text.substring(0, 200)}`, response.status, baseUrl);
       }
 
       return (await response.json()) as T;

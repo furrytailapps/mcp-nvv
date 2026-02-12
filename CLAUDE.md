@@ -16,19 +16,27 @@ https://mcp-nvv.vercel.app/mcp
 
 ## Available Tools (<!-- AUTO:tool_count -->4<!-- /AUTO -->)
 
-| Tool         | Description                                                                  |
-| ------------ | ---------------------------------------------------------------------------- |
-| `nvv_lookup` | Municipality and county code lookup. Use codes with nvv_search.              |
-| `nvv_search` | Unified search across all 3 sources (national, N2000, Ramsar) in parallel.   |
-| `nvv_detail` | Get detail for any area by id + source. Routes to correct API automatically. |
-| `nvv_extent` | Combined bounding box for areas across all sources.                          |
+| Tool         | Description                                                                           |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `nvv_lookup` | Municipality and county code lookup. Use codes with nvv_search.                       |
+| `nvv_search` | Search by kommun/lan codes (all 3 sources) OR by bbox coordinates (national + N2000). |
+| `nvv_detail` | Get detail for any area by id + source. Routes to correct API automatically.          |
+| `nvv_extent` | Combined bounding box for areas across all sources.                                   |
 
 ### Tool workflow
 
+**By location name:**
+
 1. `nvv_lookup` — convert place name to kommun/lan code
-2. `nvv_search` — pass kommun or lan code, gets ALL protected areas from ALL sources
+2. `nvv_search` — pass kommun or lan code, gets ALL sources (national, N2000, Ramsar)
 3. `nvv_detail` — pass `id` + `source` from search results for full details
 4. `nvv_extent` — pass IDs grouped by source for combined bounding box
+
+**By coordinates (bbox):**
+
+1. `nvv_search` — pass `minLat`, `minLon`, `maxLat`, `maxLon` (WGS84). Searches national + N2000 via WFS. No Ramsar (no WFS available).
+2. `nvv_detail` — pass `id` + `source` from search results for full details
+3. `nvv_extent` — pass IDs grouped by source for combined bounding box
 
 ## Project Structure
 
@@ -36,9 +44,10 @@ https://mcp-nvv.vercel.app/mcp
 src/
 ├── app/[transport]/route.ts   # MCP endpoint
 ├── clients/
-│   ├── nvv-client.ts          # Naturvardsregistret API client
-│   ├── n2000-client.ts        # Natura 2000 API client
-│   └── ramsar-client.ts       # Ramsar API client
+│   ├── nvv-client.ts          # Naturvardsregistret REST API client
+│   ├── n2000-client.ts        # Natura 2000 REST API client
+│   ├── ramsar-client.ts       # Ramsar REST API client
+│   └── wfs-client.ts          # WFS client for bbox search (national + N2000)
 ├── data/
 │   ├── kommuner.json          # Swedish municipality codes
 │   └── lan.json               # Swedish county codes
@@ -52,7 +61,7 @@ src/
 ├── tools/
 │   ├── index.ts               # Tool registry (4 tools)
 │   ├── lookup.ts              # nvv_lookup
-│   ├── search.ts              # nvv_search — fan-out to all 3 sources
+│   ├── search.ts              # nvv_search — kommun/lan (REST) or bbox (WFS)
 │   ├── detail.ts              # nvv_detail — dispatcher by source
 │   └── extent.ts              # nvv_extent — combined bounding box
 └── types/
@@ -107,6 +116,17 @@ ramsarClient.getAreaWkt(id);
 ramsarClient.getAreaLandCover(id);
 ramsarClient.getProtectionTypes(); // intentionally orphaned (reference data)
 ```
+
+### WFS Endpoints (bbox search)
+
+Used by `nvv_search` when bbox coordinates are provided. Requires EPSG:3006 (SWEREF99TM) — WGS84 input is auto-converted.
+
+| Service  | Base URL                                                      | Layer             |
+| -------- | ------------------------------------------------------------- | ----------------- |
+| National | `https://geodata.naturvardsverket.se/naturvardsregistret/wfs` | `SkyddadeOmraden` |
+| N2000    | `https://geodata.naturvardsverket.se/n2000/wfs`               | `N2000_WFS:N2000` |
+
+No Ramsar WFS exists.
 
 ### Status Values (Naturvardsregistret only)
 
