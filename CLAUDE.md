@@ -56,6 +56,7 @@ src/
 │   ├── errors.ts              # Error classes
 │   ├── http-client.ts         # HTTP wrapper
 │   ├── response.ts            # Response formatting
+│   ├── geometry-simplify.ts    # WKT Douglas-Peucker simplification
 │   ├── search-helpers.ts      # Search utilities
 │   └── wkt-utils.ts           # WKT geometry parsing
 ├── tools/
@@ -131,6 +132,20 @@ No Ramsar WFS exists.
 ### Status Values (Naturvardsregistret only)
 
 Tools always use `Gällande` (active/current). No status parameter exposed.
+
+## Geometry Simplification (Token Reduction)
+
+The `nvv_detail` tool's `geometryDetail` parameter reduces WKT geometry size via Douglas-Peucker simplification:
+
+| Value          | Returns                          | Use Case                                        |
+| -------------- | -------------------------------- | ----------------------------------------------- |
+| `"simplified"` | ~87-96% fewer coordinates        | Default. Sufficient for location context.        |
+| `"full"`       | All coordinates                  | Precise boundary analysis or map rendering.      |
+| `"none"`       | No geometry (skips API call)     | Only need metadata, land cover, documents, etc.  |
+
+Tolerance: `0.001` degrees (~100m at Swedish latitudes). Applied to WGS84 coordinates after SWEREF99TM conversion.
+
+Implementation: `src/lib/geometry-simplify.ts` — parses WKT ring structure, simplifies each ring independently, ensures rings stay closed with minimum 4 points.
 
 ## Concurrency
 
