@@ -107,7 +107,9 @@ export const nvvClient = {
    * Endpoint: GET /omrade/{areaId}/{status}/nmdklasser
    */
   async getAreaLandCover(areaId: string, status = DEFAULT_DECISION_STATUS): Promise<LandCover[]> {
-    const data = await client.request<NvvNmdKlass[]>(`/omrade/${encodeURIComponent(areaId)}/${encodeURIComponent(status)}/nmdklasser`);
+    const data = await client.request<NvvNmdKlass[]>(
+      `/omrade/${encodeURIComponent(areaId)}/${encodeURIComponent(status)}/nmdklasser`,
+    );
     return data.map((n) => ({
       name: n.namn,
       code: n.kod,
@@ -120,7 +122,9 @@ export const nvvClient = {
    * Endpoint: GET /omrade/{areaId}/{status}/miljomal
    */
   async getAreaEnvironmentalGoals(areaId: string, status = DEFAULT_DECISION_STATUS): Promise<EnvironmentalGoal[]> {
-    const data = await client.request<NvvMiljomal[]>(`/omrade/${encodeURIComponent(areaId)}/${encodeURIComponent(status)}/miljomal`);
+    const data = await client.request<NvvMiljomal[]>(
+      `/omrade/${encodeURIComponent(areaId)}/${encodeURIComponent(status)}/miljomal`,
+    );
     return data.map((m) => ({ name: m.namn }));
   },
 
@@ -144,7 +148,9 @@ export const nvvClient = {
    * Endpoint: GET /omrade/{areaId}/{status}/beslutsdokument
    */
   async getAreaDocuments(areaId: string, status = DEFAULT_DECISION_STATUS): Promise<Document[]> {
-    const data = await client.request<NvvDocument[]>(`/omrade/${encodeURIComponent(areaId)}/${encodeURIComponent(status)}/beslutsdokument`);
+    const data = await client.request<NvvDocument[]>(
+      `/omrade/${encodeURIComponent(areaId)}/${encodeURIComponent(status)}/beslutsdokument`,
+    );
     return data.map((d) => ({
       id: d.id,
       name: d.namn,

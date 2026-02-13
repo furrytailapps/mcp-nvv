@@ -5,6 +5,7 @@ import { ramsarClient } from '@/clients/ramsar-client';
 import { withErrorHandling } from '@/lib/response';
 import { ValidationError } from '@/lib/errors';
 import { DEFAULT_DECISION_STATUS } from '@/types/nvv-api';
+import { simplifyWkt } from '@/lib/geometry-simplify';
 
 const SOURCES = ['national', 'n2000', 'ramsar'] as const;
 type Source = (typeof SOURCES)[number];
@@ -26,6 +27,9 @@ const NATIONAL_ONLY: IncludeType[] = ['purposes', 'regulations', 'env_goals'];
 const N2000_ONLY: IncludeType[] = ['species', 'habitats'];
 const RAMSAR_INCOMPATIBLE: IncludeType[] = ['documents', 'purposes', 'regulations', 'env_goals', 'species', 'habitats'];
 
+const GEOMETRY_DETAIL = ['full', 'simplified', 'none'] as const;
+type GeometryDetail = (typeof GEOMETRY_DETAIL)[number];
+
 export const detailInputSchema = {
   id: z.string().describe("Area identifier from nvv_search results (e.g., '2000019', 'SE0110001', '15')"),
   source: z.enum(SOURCES).describe("Source from nvv_search results: 'national', 'n2000', or 'ramsar'"),
@@ -39,6 +43,13 @@ export const detailInputSchema = {
         'National only: purposes, regulations, env_goals. ' +
         'N2000 only: species, habitats.',
     ),
+  geometryDetail: z
+    .enum(GEOMETRY_DETAIL)
+    .optional()
+    .describe(
+      "Geometry detail level. 'simplified' (default): reduces coordinates by ~90-96% via Douglas-Peucker, saving tokens. " +
+        "'full': all coordinates. 'none': skip geometry entirely (saves API call).",
+    ),
 };
 
 export const detailTool = {
@@ -48,7 +59,8 @@ export const detailTool = {
     'Pass the id and source from nvv_search results. ' +
     'Returns geometry, land cover, documents, and source-specific data ' +
     '(national: purposes, regulations, env_goals; N2000: species, habitats). ' +
-    'Use include parameter to fetch specific data or all at once.',
+    'Use include parameter to fetch specific data or all at once. ' +
+    "Geometry is simplified by default (~90-96% smaller). Use geometryDetail='full' for precise boundaries or 'none' to skip.",
   inputSchema: detailInputSchema,
 };
 
@@ -56,7 +68,12 @@ type DetailInput = {
   id: string;
   source: Source;
   include?: IncludeType;
+  geometryDetail?: GeometryDetail;
 };
+
+function applyGeometryDetail(wkt: string, detail: GeometryDetail): string {
+  return detail === 'simplified' ? simplifyWkt(wkt) : wkt;
+}
 
 function validateIncludeForSource(include: IncludeType, source: Source): void {
   if (source === 'ramsar' && RAMSAR_INCOMPATIBLE.includes(include)) {
@@ -80,7 +97,7 @@ function validateIncludeForSource(include: IncludeType, source: Source): void {
   }
 }
 
-async function fetchNationalDetail(id: string, include: IncludeType) {
+async function fetchNationalDetail(id: string, include: IncludeType, geometryDetail: GeometryDetail) {
   const status = DEFAULT_DECISION_STATUS;
   const area = await nvvClient.getArea(id, status);
   const result: Record<string, unknown> = {
@@ -95,8 +112,11 @@ async function fetchNationalDetail(id: string, include: IncludeType) {
   };
 
   if (include === 'all') {
-    // Batch 1: geometry + purposes
-    const [geometry, purposes] = await Promise.all([nvvClient.getAreaWkt(id, status), nvvClient.getAreaPurposes(id, status)]);
+    // Batch 1: geometry (if not skipped) + purposes
+    const [geometry, purposes] = await Promise.all([
+      geometryDetail !== 'none' ? nvvClient.getAreaWkt(id, status) : Promise.resolve(null),
+      nvvClient.getAreaPurposes(id, status),
+    ]);
     // Batch 2: land_cover + regulations
     const [land_cover, regulations] = await Promise.all([
       nvvClient.getAreaLandCover(id, status),
@@ -107,7 +127,7 @@ async function fetchNationalDetail(id: string, include: IncludeType) {
       nvvClient.getAreaEnvironmentalGoals(id, status),
       nvvClient.getAreaDocuments(id, status),
     ]);
-    result.geometry = geometry;
+    if (geometry) result.geometry = applyGeometryDetail(geometry, geometryDetail);
     result.purposes = purposes;
     result.land_cover = land_cover;
     result.regulations = regulations;
@@ -117,9 +137,13 @@ async function fetchNationalDetail(id: string, include: IncludeType) {
   }
 
   switch (include) {
-    case 'geometry':
-      result.geometry = await nvvClient.getAreaWkt(id, status);
+    case 'geometry': {
+      if (geometryDetail !== 'none') {
+        const wkt = await nvvClient.getAreaWkt(id, status);
+        result.geometry = applyGeometryDetail(wkt, geometryDetail);
+      }
       break;
+    }
     case 'purposes':
       result.purposes = await nvvClient.getAreaPurposes(id, status);
       break;
@@ -139,7 +163,7 @@ async function fetchNationalDetail(id: string, include: IncludeType) {
   return result;
 }
 
-async function fetchN2000Detail(kod: string, include: IncludeType) {
+async function fetchN2000Detail(kod: string, include: IncludeType, geometryDetail: GeometryDetail) {
   const area = await n2000Client.getArea(kod);
   const result: Record<string, unknown> = {
     id: area.kod,
@@ -155,14 +179,17 @@ async function fetchN2000Detail(kod: string, include: IncludeType) {
   if (include === 'all') {
     // Batch 1: species + habitats
     const [species, habitats] = await Promise.all([n2000Client.getAreaSpecies(kod), n2000Client.getAreaHabitats(kod)]);
-    // Batch 2: land_cover + geometry
-    const [land_cover, geometry] = await Promise.all([n2000Client.getAreaLandCover(kod), n2000Client.getAreaWkt(kod)]);
+    // Batch 2: land_cover + geometry (if not skipped)
+    const [land_cover, geometry] = await Promise.all([
+      n2000Client.getAreaLandCover(kod),
+      geometryDetail !== 'none' ? n2000Client.getAreaWkt(kod) : Promise.resolve(null),
+    ]);
     // Batch 3: documents
     const documents = await n2000Client.getAreaDocuments(kod);
     result.species = species;
     result.habitats = habitats;
     result.land_cover = land_cover;
-    result.geometry = geometry;
+    if (geometry) result.geometry = applyGeometryDetail(geometry, geometryDetail);
     result.documents = documents;
     return result;
   }
@@ -177,9 +204,13 @@ async function fetchN2000Detail(kod: string, include: IncludeType) {
     case 'land_cover':
       result.land_cover = await n2000Client.getAreaLandCover(kod);
       break;
-    case 'geometry':
-      result.geometry = await n2000Client.getAreaWkt(kod);
+    case 'geometry': {
+      if (geometryDetail !== 'none') {
+        const wkt = await n2000Client.getAreaWkt(kod);
+        result.geometry = applyGeometryDetail(wkt, geometryDetail);
+      }
       break;
+    }
     case 'documents':
       result.documents = await n2000Client.getAreaDocuments(kod);
       break;
@@ -187,7 +218,7 @@ async function fetchN2000Detail(kod: string, include: IncludeType) {
   return result;
 }
 
-async function fetchRamsarDetail(id: string, include: IncludeType) {
+async function fetchRamsarDetail(id: string, include: IncludeType, geometryDetail: GeometryDetail) {
   const area = await ramsarClient.getArea(id);
   const result: Record<string, unknown> = {
     id: area.id,
@@ -201,17 +232,24 @@ async function fetchRamsarDetail(id: string, include: IncludeType) {
   };
 
   if (include === 'all') {
-    // Batch: geometry + land_cover (Ramsar has no documents endpoint)
-    const [geometry, land_cover] = await Promise.all([ramsarClient.getAreaWkt(id), ramsarClient.getAreaLandCover(id)]);
-    result.geometry = geometry;
+    // Batch: geometry (if not skipped) + land_cover (Ramsar has no documents endpoint)
+    const [geometry, land_cover] = await Promise.all([
+      geometryDetail !== 'none' ? ramsarClient.getAreaWkt(id) : Promise.resolve(null),
+      ramsarClient.getAreaLandCover(id),
+    ]);
+    if (geometry) result.geometry = applyGeometryDetail(geometry, geometryDetail);
     result.land_cover = land_cover;
     return result;
   }
 
   switch (include) {
-    case 'geometry':
-      result.geometry = await ramsarClient.getAreaWkt(id);
+    case 'geometry': {
+      if (geometryDetail !== 'none') {
+        const wkt = await ramsarClient.getAreaWkt(id);
+        result.geometry = applyGeometryDetail(wkt, geometryDetail);
+      }
       break;
+    }
     case 'land_cover':
       result.land_cover = await ramsarClient.getAreaLandCover(id);
       break;
@@ -220,16 +258,16 @@ async function fetchRamsarDetail(id: string, include: IncludeType) {
 }
 
 export const detailHandler = withErrorHandling(async (args: DetailInput) => {
-  const { id, source, include = 'all' } = args;
+  const { id, source, include = 'all', geometryDetail = 'simplified' } = args;
 
   validateIncludeForSource(include, source);
 
   switch (source) {
     case 'national':
-      return fetchNationalDetail(id, include);
+      return fetchNationalDetail(id, include, geometryDetail);
     case 'n2000':
-      return fetchN2000Detail(id, include);
+      return fetchN2000Detail(id, include, geometryDetail);
     case 'ramsar':
-      return fetchRamsarDetail(id, include);
+      return fetchRamsarDetail(id, include, geometryDetail);
   }
 });
