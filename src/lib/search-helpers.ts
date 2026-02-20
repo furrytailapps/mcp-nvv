@@ -1,6 +1,3 @@
-/**
- * Generic fuzzy search and sort function for lookup data
- */
 export function searchAndSort<T extends { name: string }>(items: T[], query: string): T[] {
   const lowerQuery = query.toLowerCase();
 

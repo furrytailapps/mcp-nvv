@@ -43,7 +43,6 @@ export const extentHandler = withErrorHandling(async (args: ExtentInput) => {
     throw new ValidationError(`Too many IDs (${totalCount}). Maximum 100 total IDs across all sources.`);
   }
 
-  // Fetch extents in parallel per source
   const extentPromises: Promise<string>[] = [];
   if (nationalIds.length > 0) extentPromises.push(nvvClient.getAreasExtent(nationalIds));
   if (n2000Ids.length > 0) extentPromises.push(n2000Client.getAreasExtent(n2000Ids));
@@ -51,7 +50,6 @@ export const extentHandler = withErrorHandling(async (args: ExtentInput) => {
 
   const extentWkts = await Promise.all(extentPromises);
 
-  // If only one source, return its extent directly
   if (extentWkts.length === 1) {
     return {
       national_ids: nationalIds,
@@ -63,7 +61,6 @@ export const extentHandler = withErrorHandling(async (args: ExtentInput) => {
     };
   }
 
-  // Combine bounding boxes from multiple sources
   const boundingBoxes = extentWkts.map(extractBoundingBoxFromWkt);
   const combined = combineBoundingBoxes(boundingBoxes);
   const combinedWkt = boundingBoxToWkt(combined);

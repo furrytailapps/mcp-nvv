@@ -17,9 +17,6 @@ const client = createHttpClient({
   timeout: 30000,
 });
 
-/**
- * Transform raw Ramsar area to clean format
- */
 function transformArea(area: RamsarRawArea): RamsarArea {
   return {
     id: area.id,
@@ -39,9 +36,6 @@ function transformArea(area: RamsarRawArea): RamsarArea {
   };
 }
 
-/**
- * Transform raw land cover to clean format
- */
 function transformLandCover(nmd: RamsarRawNmdKlass): RamsarLandCover {
   return {
     ramsar_id: nmd.ramsarId,
@@ -51,9 +45,6 @@ function transformLandCover(nmd: RamsarRawNmdKlass): RamsarLandCover {
   };
 }
 
-/**
- * Transform raw protection type to clean format
- */
 function transformProtectionType(type: RamsarRawProtectionType): RamsarProtectionType {
   return {
     key: type.key,
@@ -62,10 +53,6 @@ function transformProtectionType(type: RamsarRawProtectionType): RamsarProtectio
 }
 
 export const ramsarClient = {
-  /**
-   * List Ramsar wetland areas
-   * Endpoint: GET /ramsar/nolinks
-   */
   async listAreas(params: {
     kommun?: string;
     lan?: string;
@@ -85,45 +72,26 @@ export const ramsarClient = {
     return areas.map(transformArea);
   },
 
-  /**
-   * Get single Ramsar area by ID
-   * Endpoint: GET /ramsar/{id}
-   */
   async getArea(id: string): Promise<RamsarArea> {
     const area = await client.request<RamsarRawArea>(`/ramsar/${encodeURIComponent(id)}`);
     return transformArea(area);
   },
 
-  /**
-   * Get WKT geometry for a Ramsar area (returned in WGS84)
-   * Endpoint: GET /ramsar/{id}/wkt
-   */
   async getAreaWkt(id: string): Promise<string> {
     const wkt = await client.request<string>(`/ramsar/${encodeURIComponent(id)}/wkt`);
     return convertWktToWgs84(wkt);
   },
 
-  /**
-   * Get land cover (NMD classes) for a Ramsar area
-   * Endpoint: GET /ramsar/{id}/nmdklasser
-   */
   async getAreaLandCover(id: string): Promise<RamsarLandCover[]> {
     const nmd = await client.request<RamsarRawNmdKlass[]>(`/ramsar/${encodeURIComponent(id)}/nmdklasser`);
     return nmd.map(transformLandCover);
   },
 
-  /**
-   * Get available protection types
-   * Endpoint: GET /ramsar/skyddstyper/list
-   */
   async getProtectionTypes(): Promise<RamsarProtectionType[]> {
     const types = await client.request<RamsarRawProtectionType[]>('/ramsar/skyddstyper/list');
     return types.map(transformProtectionType);
   },
 
-  /**
-   * Get bounding box for multiple areas (returned in WGS84)
-   */
   async getAreasExtent(ids: string[]): Promise<string> {
     try {
       const result = await client.request<string>('/ramsar/extentAsWkt', {
@@ -136,23 +104,16 @@ export const ramsarClient = {
 
       throw new Error('Invalid WKT response');
     } catch {
-      // Fallback to client-side computation
       return this.computeExtentClientSide(ids);
     }
   },
 
-  /**
-   * Client-side extent calculation fallback (returns WGS84)
-   * Note: getAreaWkt already returns WGS84 coordinates
-   */
   async computeExtentClientSide(ids: string[]): Promise<string> {
-    // Note: getAreaWkt already converts to WGS84
     const wktResults = await runWithConcurrency(
       ids.map((id) => () => this.getAreaWkt(id)),
       NVV_API_CONCURRENCY,
     );
 
-    // Extract bounding boxes (already in WGS84)
     const boundingBoxes = wktResults.map(extractBoundingBoxFromWkt);
     const combinedBox = combineBoundingBoxes(boundingBoxes);
     return boundingBoxToWkt(combinedBox);

@@ -1,8 +1,3 @@
-/**
- * Types for International Conventions (Ramsar) API responses
- * API: https://geodata.naturvardsverket.se/internationellakonventioner/rest/v3
- */
-
 // ============================================
 // Raw API Response Types
 // ============================================

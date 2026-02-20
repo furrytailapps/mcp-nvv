@@ -8,15 +8,6 @@
 
 const DEFAULT_TOLERANCE = 0.001; // ~100m at Swedish latitudes
 
-/**
- * Simplify a WKT geometry string (POLYGON or MULTIPOLYGON)
- *
- * Finds innermost parenthesized coordinate groups, simplifies each ring
- * independently via Douglas-Peucker, and reconstructs the WKT string.
- *
- * Rings that would shrink below 4 points (minimum valid polygon) are
- * kept unsimplified.
- */
 export function simplifyWkt(wkt: string, tolerance: number = DEFAULT_TOLERANCE): string {
   // Match innermost parenthesized groups containing coordinate data
   // These are the actual coordinate rings — outer parens are structural
@@ -40,10 +31,6 @@ export function simplifyWkt(wkt: string, tolerance: number = DEFAULT_TOLERANCE):
   });
 }
 
-/**
- * Parse a WKT coordinate ring string into [x, y] pairs
- * Input: "18.123 59.456, 18.789 59.012, ..."
- */
 function parseCoordRing(coordString: string): [number, number][] {
   return coordString
     .split(',')
@@ -58,11 +45,7 @@ function parseCoordRing(coordString: string): [number, number][] {
     .filter((c): c is [number, number] => c !== null);
 }
 
-/**
- * Douglas-Peucker line simplification algorithm
- *
- * Ported from mcp-trafikverket geometry-utils.ts
- */
+// Douglas-Peucker line simplification (ported from mcp-trafikverket)
 function simplifyPath(coords: [number, number][], tolerance: number): [number, number][] {
   if (coords.length <= 2) return coords;
 
@@ -88,9 +71,6 @@ function simplifyPath(coords: [number, number][], tolerance: number): [number, n
   return [first, last];
 }
 
-/**
- * Calculate perpendicular distance from point to line
- */
 function perpendicularDistance(point: [number, number], lineStart: [number, number], lineEnd: [number, number]): number {
   const [x, y] = point;
   const [x1, y1] = lineStart;

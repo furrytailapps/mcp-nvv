@@ -3,7 +3,6 @@ import { registerAllTools } from '@/tools';
 
 const handler = createMcpHandler(
   (server) => {
-    // Register all NVV tools
     registerAllTools(server);
   },
   {},

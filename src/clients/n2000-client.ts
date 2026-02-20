@@ -21,9 +21,6 @@ const client = createHttpClient({
   timeout: 30000,
 });
 
-/**
- * Transform raw N2000 area to clean format
- */
 function transformArea(area: N2000RawArea): N2000Area {
   return {
     kod: area.kod,
@@ -41,9 +38,6 @@ function transformArea(area: N2000RawArea): N2000Area {
   };
 }
 
-/**
- * Transform raw species to clean format
- */
 function transformSpecies(species: N2000RawSpecies): N2000Species {
   return {
     name: species.namn,
@@ -51,9 +45,6 @@ function transformSpecies(species: N2000RawSpecies): N2000Species {
   };
 }
 
-/**
- * Transform raw habitat to clean format
- */
 function transformHabitat(habitat: N2000RawHabitat): N2000Habitat {
   return {
     code: habitat.kod,
@@ -62,9 +53,6 @@ function transformHabitat(habitat: N2000RawHabitat): N2000Habitat {
   };
 }
 
-/**
- * Transform raw land cover to clean format
- */
 function transformLandCover(nmd: N2000RawNmdKlass): N2000LandCover {
   return {
     code: nmd.kod,
@@ -73,9 +61,6 @@ function transformLandCover(nmd: N2000RawNmdKlass): N2000LandCover {
   };
 }
 
-/**
- * Transform raw document to clean format
- */
 function transformDocument(doc: N2000RawDocument): N2000Document {
   return {
     id: doc.id,
@@ -87,10 +72,6 @@ function transformDocument(doc: N2000RawDocument): N2000Document {
 }
 
 export const n2000Client = {
-  /**
-   * List Natura 2000 areas
-   * Endpoint: GET /omrade/nolinks
-   */
   async listAreas(params: {
     kommun?: string;
     lan?: string;
@@ -112,99 +93,55 @@ export const n2000Client = {
     return areas.map(transformArea);
   },
 
-  /**
-   * Get single Natura 2000 area by code
-   * Endpoint: GET /omrade/{kod}
-   */
   async getArea(kod: string): Promise<N2000Area> {
     const area = await client.request<N2000RawArea>(`/omrade/${encodeURIComponent(kod)}`);
     return transformArea(area);
   },
 
-  /**
-   * Get species in a Natura 2000 area
-   * Endpoint: GET /omrade/{kod}/arter
-   */
   async getAreaSpecies(kod: string): Promise<N2000Species[]> {
     const species = await client.request<N2000RawSpecies[]>(`/omrade/${encodeURIComponent(kod)}/arter`);
     return species.map(transformSpecies);
   },
 
-  /**
-   * Get habitat types in a Natura 2000 area
-   * Endpoint: GET /omrade/{kod}/naturtyper
-   */
   async getAreaHabitats(kod: string): Promise<N2000Habitat[]> {
     const habitats = await client.request<N2000RawHabitat[]>(`/omrade/${encodeURIComponent(kod)}/naturtyper`);
     return habitats.map(transformHabitat);
   },
 
-  /**
-   * Get land cover (NMD classes) in a Natura 2000 area
-   * Endpoint: GET /omrade/{kod}/nmdklasser
-   */
   async getAreaLandCover(kod: string): Promise<N2000LandCover[]> {
     const nmd = await client.request<N2000RawNmdKlass[]>(`/omrade/${encodeURIComponent(kod)}/nmdklasser`);
     return nmd.map(transformLandCover);
   },
 
-  /**
-   * Get WKT geometry for a Natura 2000 area (returned in WGS84)
-   * Endpoint: GET /omrade/{kod}/wkt
-   */
   async getAreaWkt(kod: string): Promise<string> {
     const wkt = await client.request<string>(`/omrade/${encodeURIComponent(kod)}/wkt`);
     return convertWktToWgs84(wkt);
   },
 
-  /**
-   * Get documents for a Natura 2000 area
-   * Endpoint: GET /omrade/{kod}/dokument
-   */
   async getAreaDocuments(kod: string): Promise<N2000Document[]> {
     const docs = await client.request<N2000RawDocument[]>(`/omrade/${encodeURIComponent(kod)}/dokument`);
     return docs.map(transformDocument);
   },
 
-  /**
-   * Get all species (complete species list)
-   * Endpoint: GET /arter
-   */
   async getAllSpecies(): Promise<N2000Species[]> {
     const species = await client.request<N2000RawSpecies[]>('/arter');
     return species.map(transformSpecies);
   },
 
-  /**
-   * Get species by group
-   * Endpoint: GET /arter/{grupp}
-   */
   async getSpeciesByGroup(group: string): Promise<N2000Species[]> {
     const species = await client.request<N2000RawSpecies[]>(`/arter/${encodeURIComponent(group)}`);
     return species.map(transformSpecies);
   },
 
-  /**
-   * Get all habitat types
-   * Endpoint: GET /naturtyper
-   */
   async getAllHabitats(): Promise<N2000Habitat[]> {
     const habitats = await client.request<N2000RawHabitat[]>('/naturtyper');
     return habitats.map(transformHabitat);
   },
 
-  /**
-   * Get area types (SPA, SCI, SPA/SCI)
-   * Endpoint: GET /omrade/omradestyper
-   */
   async getAreaTypes(): Promise<string[]> {
     return client.request<string[]>('/omrade/omradestyper');
   },
 
-  /**
-   * Get bounding box for multiple areas (returned in WGS84)
-   * Uses same workaround pattern as nvvClient for API bugs
-   */
   async getAreasExtent(kods: string[]): Promise<string> {
     try {
       const result = await client.request<string>('/omrade/extentAsWkt', {
@@ -217,23 +154,16 @@ export const n2000Client = {
 
       throw new Error('Invalid WKT response');
     } catch {
-      // Fallback to client-side computation
       return this.computeExtentClientSide(kods);
     }
   },
 
-  /**
-   * Client-side extent calculation fallback (returns WGS84)
-   * Note: getAreaWkt already returns WGS84 coordinates
-   */
   async computeExtentClientSide(kods: string[]): Promise<string> {
-    // Note: getAreaWkt already converts to WGS84
     const wktResults = await runWithConcurrency(
       kods.map((kod) => () => this.getAreaWkt(kod)),
       NVV_API_CONCURRENCY,
     );
 
-    // Extract bounding boxes (already in WGS84)
     const boundingBoxes = wktResults.map(extractBoundingBoxFromWkt);
     const combinedBox = combineBoundingBoxes(boundingBoxes);
     return boundingBoxToWkt(combinedBox);

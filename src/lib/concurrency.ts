@@ -1,8 +1,3 @@
-/**
- * Run async functions with limited concurrency to avoid overwhelming upstream APIs.
- *
- * Example: With 6 functions and concurrency of 2, runs 3 batches of 2 calls each.
- */
 export async function runWithConcurrency<T>(fns: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
   const results: T[] = [];
   for (let i = 0; i < fns.length; i += concurrency) {
@@ -13,5 +8,5 @@ export async function runWithConcurrency<T>(fns: (() => Promise<T>)[], concurren
   return results;
 }
 
-/** Max concurrent API calls to NVV to avoid rate limiting / 503 errors */
+// Max concurrent requests — prevents NVV rate limiting / 503 errors
 export const NVV_API_CONCURRENCY = 2;

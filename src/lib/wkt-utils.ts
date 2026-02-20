@@ -22,12 +22,7 @@ export interface BoundingBox {
   maxY: number;
 }
 
-/**
- * WORKAROUND: Extract bounding box from WKT geometry string
- *
- * Parses POLYGON or MULTIPOLYGON WKT and extracts min/max coordinates.
- * Works by finding all coordinate pairs and computing their bounds.
- */
+// WORKAROUND: Client-side bbox extraction (NVV extentAsWkt endpoint fails with Oracle errors)
 export function extractBoundingBoxFromWkt(wkt: string): BoundingBox {
   // Match all coordinate pairs: "number number"
   const coordPattern = /(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
@@ -57,12 +52,7 @@ export function extractBoundingBoxFromWkt(wkt: string): BoundingBox {
   return { minX, maxX, minY, maxY };
 }
 
-/**
- * WORKAROUND: Combine multiple bounding boxes into one
- *
- * Takes an array of bounding boxes and returns a single bounding box
- * that encompasses all of them.
- */
+// WORKAROUND: Combine multiple bounding boxes into one
 export function combineBoundingBoxes(boxes: BoundingBox[]): BoundingBox {
   if (boxes.length === 0) {
     throw new Error('Cannot combine empty array of bounding boxes');
@@ -76,40 +66,20 @@ export function combineBoundingBoxes(boxes: BoundingBox[]): BoundingBox {
   }));
 }
 
-/**
- * WORKAROUND: Convert bounding box to WKT POLYGON string
- *
- * Creates a rectangular polygon from the bounding box coordinates.
- * Format matches NVV API output: POLYGON (( x1 y1, x2 y1, x2 y2, x1 y2, x1 y1))
- */
+// WORKAROUND: Convert bbox to WKT POLYGON matching NVV API output format
 export function boundingBoxToWkt(box: BoundingBox): string {
   const { minX, maxX, minY, maxY } = box;
   return `POLYGON (( ${minX} ${minY}, ${maxX} ${minY}, ${maxX} ${maxY}, ${minX} ${maxY}, ${minX} ${minY}))`;
 }
 
-/**
- * Convert WKT geometry from SWEREF99TM to WGS84
- *
- * Parses WKT string, converts each coordinate pair from SWEREF99TM (x, y)
- * to WGS84 (longitude, latitude), and reconstructs the WKT string.
- *
- * Supports POLYGON, MULTIPOLYGON, POINT, LINESTRING, and other common WKT types.
- * Preserves geometry structure and formatting.
- */
 export function convertWktToWgs84(wkt: string): string {
-  // Match all coordinate pairs: "number number" (x y in SWEREF99TM)
-  // Capture groups: (x-coordinate) (y-coordinate)
   const coordPattern = /(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
 
   return wkt.replace(coordPattern, (_match, xStr: string, yStr: string) => {
     const x = parseFloat(xStr);
     const y = parseFloat(yStr);
-
-    // Convert from SWEREF99TM to WGS84
     const wgs84 = sweref99ToWgs84({ x, y });
-
-    // WKT uses "x y" format which is "longitude latitude" for WGS84
-    // Round to 6 decimal places (about 11cm precision)
+    // WKT uses "x y" = "longitude latitude" for WGS84; 6 decimals ~ 11cm precision
     return `${wgs84.longitude.toFixed(6)} ${wgs84.latitude.toFixed(6)}`;
   });
 }

@@ -1,8 +1,3 @@
-/**
- * Types for Natura 2000 API responses
- * API: https://geodata.naturvardsverket.se/n2000/rest/v3
- */
-
 // ============================================
 // Raw API Response Types
 // ============================================

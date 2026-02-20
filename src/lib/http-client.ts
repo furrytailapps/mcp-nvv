@@ -6,9 +6,6 @@ interface HttpClientConfig {
   headers?: Record<string, string>;
 }
 
-/**
- * Create a typed HTTP client for API wrapping
- */
 export function createHttpClient(config: HttpClientConfig) {
   const { baseUrl, timeout = 30000, headers = {} } = config;
 
@@ -22,11 +19,12 @@ export function createHttpClient(config: HttpClientConfig) {
   ): Promise<T> {
     const { method = 'GET', params, body } = options;
 
-    // Build URL with query params (strip leading / from path if present)
+    // Strip leading / from path to avoid double-slash in URL
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     const url = new URL(cleanPath, baseUrl.endsWith('/') ? baseUrl : baseUrl + '/');
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
+        // WORKAROUND: LLM agents pass "" for optional params
         if (value !== undefined && value !== '') {
           url.searchParams.set(key, String(value));
         }

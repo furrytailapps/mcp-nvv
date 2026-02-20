@@ -1,7 +1,3 @@
-/**
- * Types for Naturvardsverket API responses
- */
-
 export interface NvvArea {
   id: string;
   namn: string;
@@ -57,10 +53,6 @@ export interface NvvDocument {
   beslutsdatum: number;
   gallandedatum: number;
 }
-
-/**
- * Transformed types for tool responses
- */
 
 export interface ProtectedArea {
   id: string;
@@ -128,17 +120,9 @@ export interface County {
   name: string;
 }
 
-/**
- * Constants for NVV API
- */
-
 // Default decision status for area queries
 // "Gällande" means "Current/Valid" in Swedish
 export const DEFAULT_DECISION_STATUS = 'Gällande';
-
-/**
- * WFS GeoJSON response types
- */
 
 export interface WfsFeatureCollection<P> {
   type: 'FeatureCollection';

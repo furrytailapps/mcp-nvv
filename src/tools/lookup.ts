@@ -8,9 +8,6 @@ import lanData from '@/data/lan.json';
 const kommuner = kommunerData as Municipality[];
 const lan = lanData as County[];
 
-/**
- * Lookup types
- */
 const LOOKUP_TYPES = ['municipality', 'county'] as const;
 
 type LookupType = (typeof LOOKUP_TYPES)[number];
