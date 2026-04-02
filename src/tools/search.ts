@@ -21,10 +21,11 @@ export const searchInputSchema = {
   minLat: z
     .number()
     .optional()
-    .describe('Bounding box south edge, WGS84 latitude (e.g., 59.30). Use bbox OR kommun/lan, not both.'),
-  minLon: z.number().optional().describe('Bounding box west edge, WGS84 longitude (e.g., 18.00)'),
+    .describe('Bounding box south edge, WGS84 latitude (e.g., 59.30). Can equal maxLat for point queries.'),
+  minLon: z.number().optional().describe('Bounding box west edge, WGS84 longitude (e.g., 18.00). Can equal maxLon for point queries.'),
   maxLat: z.number().optional().describe('Bounding box north edge, WGS84 latitude (e.g., 59.40)'),
   maxLon: z.number().optional().describe('Bounding box east edge, WGS84 longitude (e.g., 18.10)'),
+  bufferMeters: z.number().optional().describe('Buffer added around bbox edges in meters (default: 200). Useful for point queries or capturing features near boundaries.'),
   limit: z.number().optional().describe('Max areas per source (1-500, default: 100)'),
 };
 
@@ -34,10 +35,12 @@ export const searchTool = {
     'Search protected nature areas in Sweden. Two search modes: ' +
     '(1) By municipality/county code (kommun/lan) — searches national, Natura 2000, AND Ramsar areas. ' +
     '(2) By bounding box (minLat/minLon/maxLat/maxLon in WGS84) — searches national and Natura 2000 areas ' +
-    '(Ramsar not available for bbox). Use nvv_lookup to convert place names to codes. ' +
-    'Returns results tagged by source with an id field for use with nvv_detail. ' +
-    'The same physical area may appear under multiple sources (e.g., both national and N2000) — ' +
-    'these represent different legal protection schemes and are not duplicates.',
+    '(Ramsar not available for bbox). Point queries supported: set minLat=maxLat, minLon=maxLon. ' +
+    'A 200m buffer is always added around the bbox (adjustable via bufferMeters). ' +
+    'Example bbox: minLat=59.30, minLon=18.00, maxLat=59.40, maxLon=18.10. ' +
+    'Example point: minLat=59.33, minLon=18.07, maxLat=59.33, maxLon=18.07. ' +
+    'Use nvv_lookup to convert place names to codes. ' +
+    'Returns results tagged by source with an id field for use with nvv_detail.',
   inputSchema: searchInputSchema,
 };
 
@@ -48,6 +51,7 @@ type SearchInput = {
   minLon?: number;
   maxLat?: number;
   maxLon?: number;
+  bufferMeters?: number;
   limit?: number;
 };
 
@@ -85,12 +89,10 @@ async function searchByBbox(args: SearchInput, limit: number) {
   }
 
   // Convert once — validates bounds and produces SWEREF99TM bbox for WFS
-  const swerefBbox = wgs84BboxToSweref99({
-    minLat: args.minLat,
-    minLon: args.minLon,
-    maxLat: args.maxLat,
-    maxLon: args.maxLon,
-  });
+  const swerefBbox = wgs84BboxToSweref99(
+    { minLat: args.minLat, minLon: args.minLon, maxLat: args.maxLat, maxLon: args.maxLon },
+    args.bufferMeters,
+  );
 
   const [national, n2000] = await Promise.allSettled([
     wfsClient.searchNational(swerefBbox, limit),
